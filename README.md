@@ -1,4 +1,19 @@
-# Windows Server 2022 Active Directory Lab Setup
+# Windows Server 2022 Active Directory Hyper-V Lab Setup
+
+This project demonstrates the step-by-step setup of a virtualized Windows Server 2022 Active Directory environment using Hyper-V. The lab simulates a real-world IT infrastructure by integrating Windows 11 clients and configuring essential services like Active Directory Domain Services (AD DS), DHCP, and Routing with NAT.
+
+---
+
+### **What This Project Consists Of**
+- **Virtualized Environment**: Built using Hyper-V to host both the Windows Server 2022 and Windows 11 Pro Client VMs.  
+- **Domain Controller Setup**: Configured to manage users, groups, and resources using Active Directory.  
+- **Networking Configuration**: Includes static IP assignment for the server, DHCP for dynamic IP management, and NAT for internet routing.  
+- **Client Integration**: A Windows 11 Pro client joined to the domain to simulate a workstation in a business environment.  
+- **Active Directory Management**: Organized users into Organizational Units (OUs), assigned roles, and applied group policies.  
+- **Testing and Troubleshooting**: Verified connectivity, domain integration, and policy enforcement through practical testing scenarios.
+
+## Disclaimer  
+This project was created as part of my learning journey to deepen my understanding of Windows Server administration, Active Directory configurations, and virtualization using Hyper-V. While I’ve taken care to ensure accuracy, this guide reflects my current knowledge and may evolve as I continue to learn. Constructive feedback and suggestions are always welcome!
 
 
 ## **Table of Contents**
@@ -15,13 +30,16 @@
 9. [Promoting the Server to a Domain Controller](#9-promoting-the-server-to-a-domain-controller)  
 10. [Configuring Routing with NAT](#10-configuring-routing-with-nat)  
 11. [Configuring the DHCP Scope](#11-configuring-the-dhcp-scope)  
-12. [Creating the Client Virtual Machine](#12-creating-the-client-virtual-machine)  
+12. [Creating the Client VM](#12-creating-the-client-vm)  
 13. [Installing Windows 11 Pro Client](#13-installing-windows-11-pro-client)  
 14. [Joining a Client to the Domain](#14-joining-a-client-to-the-domain)  
-15. [Organizing OUs, Creating Accounts, and Managing Group Assignments](#15-organizing-ous-creating-accounts-and-managing-group-assignments)  
-16. [Verifying Client Connectivity and IP Configuration](#16-verifying-client-connectivity-and-ip-configuration)  
+15. [Organizing OUs, Creating Accounts, and Managing Group Assignments in AD](#15-organizing-ous-creating-accounts-and-managing-group-assignments-in-ad)  
+16. [Verifying Client Network Connectivity and IP Configuration](#16-verifying-client-network-connectivity-and-ip-configuration)
+17. [Troubleshooting](#17-troubleshooting)  
+   17.1 [Issue1](#171-common-account-lockout-issues)  
+   17.2 [Issue2](#172-dns-configuration-problems)  
+   17.3 [Issue3](#173-group-policy-not-applying)
  
-
 ----
 
 # 🧰 Requirements  
@@ -735,4 +753,377 @@ Tick **`003 Router`** and enter the gateway IP address (**`10.10.0.1`**) again, 
 ![image](Images/97.png)
 
 ---
+
+# **12. Creating the Client VM**
+
+In this step, we will create a Windows 11 client virtual machine in **Hyper-V**. This VM will act as a domain-joined workstation, routed through the server for internet access and internal communication.
+
+## **Step 12.1**  
+Go to **Hyper-V Manager**, right-click the host, and select **`New > Virtual Machine`**.  
+
+![image](Images/99.png)
+
+## **Step 12.2**  
+Name the client appropriately. In this instance, I will name it **`Project-Client`**, and then click **`Next`**.  
+
+![image](Images/100.png)
+
+## **Step 12.3**  
+Select **`Generation 2`** and press **`Next`**. 
+
+> [!TIP]  
+> **Generation 2** supports modern hardware features like UEFI and Secure Boot, required for Windows 11 installations.
+ 
+![image](Images/101.png)
+
+## **Step 12.4**  
+Assign **`4096 MB`** (4 GB) of memory to meet the minimum RAM requirement for Windows 11. Check **`Use Dynamic Memory`** and click **`Next`**. 
+
+> [!NOTE]  
+> Dynamic Memory allows efficient use of resources by scaling the VM's memory allocation based on demand.
+ 
+![image](Images/102.png)
+
+## **Step 12.5**  
+Select the **Internal (Office) NIC** for the network connection and click **`Next`**.  
+
+> [!IMPORTANT]  
+> This client VM does not have direct internet access. It will rely on the server's **External NIC** for internet routing via NAT.
+ 
+![image](Images/103.png)
+
+## **Step 12.6**  
+Leave the virtual hard disk (VHD) settings as default and click **`Next`**.  
+
+![image](Images/104.png)
+
+## **Step 12.7**  
+Under **Installation Options**, select **`Install an operating system from a bootable CD/DVD-ROM`**, then browse to locate your saved **Windows 11 ISO** file. Click **`Next`**.  
+
+![image](Images/105.png)
+
+## **Step 12.8**  
+Review the VM summary to ensure all details are correct, then click **`Finish`** to create the virtual machine. 
+
+![image](Images/106.png)
+
+## **Step 12.9**  
+Right-click on the **`Project-Client`** VM you just created and select **`Settings`**. 
+
+![image](Images/108.1.png)
+
+## **Step 12.10**  
+In the **Settings** window, go to **Security** and enable **TPM** (Trusted Platform Module).  
+
+> [!IMPORTANT]  
+> TPM (Trusted Platform Module) is a hardware-based security feature essential for Windows 11 installations. It enables secure boot and encryption, ensuring system integrity. Without enabling TPM, the Windows 11 installation will not proceed and may fail.
+
+Click **`Apply`** and **`OK`**. 
+
+![image](Images/108.png)
+
+## **Step 12.11**  
+Connect to the VM to begin the Windows 11 installation process.  
+
+![image](Images/107.png)
+
+---
+
+# **13. Installing Windows 11 Pro Client**
+
+In this step, we will install **Windows 11 Pro** on the client VM (**`Project-Client`**) you created earlier. This installation will prepare the client to join the domain and function as a workstation.
+
+## **Step 13.1**  
+Connect to the VM. You will be prompted to press any key to begin the boot installation.  
+
+![image](Images/109.png)
+
+## **Step 13.2**  
+Choose your desired **language**, **time and currency format**, and **keyboard settings**, then press **Next**.  
+
+![image](Images/110.png) ![image](Images/111.png)
+
+## **Step 13.3**  
+Tick **Install Windows 11** since this is a fresh installation, agree to the terms, and press **Next**.  
+
+![image](Images/112.png)
+
+## **Step 13.4**  
+Select **`I don’t have a product key`** to proceed.  
+
+![image](Images/113.png)
+
+## **Step 13.5**  
+Choose **Windows 11 Pro** or higher as the image.  
+
+> [!IMPORTANT]  
+> **Windows 11 Pro** or higher is required for domain connectivity. Windows 11 Home does not support domain joining.  
+
+Press **Next** to continue.  
+
+![image](Images/114.png)
+
+## **Step 13.6**  
+Agree to the terms and conditions.  
+
+![image](Images/115.png)
+
+## **Step 13.7**  
+Select the disk for installation and press **Next**. Windows will begin installing, which may take some time.  
+
+![image](Images/116.png) 
+
+![image](Images/117.png)
+
+## **Step 13.8**  
+Once Windows is installed, you will be presented with the setup screen. Select your **country** and **keyboard layout**, then press **Next**.  
+
+![image](Images/118.png) 
+
+![image](Images/119.png)
+
+## **Step 13.9**  
+Choose **Set up for work** to prepare the system for domain joining, and press **Next**.  
+
+![image](Images/120.png)
+
+## **Step 13.10**  
+Click on **Sign-in Options**,  
+
+![image](Images/121.png)
+
+then select **Domain Join Instead** since we are not signing in with a Microsoft account.
+
+![image](Images/122.png)
+
+## **Step 13.11**  
+Choose a name for the client. For this project, I selected **`Project-Client`**, then press **Next**.  
+
+![image](Images/123.png)
+
+## **Step 13.12**  
+You can skip the password setup for convenience or set a password if desired, then press **Next**.  
+
+![image](Images/124.png)
+
+## **Step 13.13**  
+You may choose to turn off all privacy settings if preferred. This is optional and will not affect functionality. Press **Accept** to proceed. 
+
+> [!NOTE]  
+> If you set a password, you will be prompted to enter it on the log-in screen. If no password was set, simply click Sign In to proceed directly to your newly installed Windows 11 Desktop.  
+
+![image](Images/125.png) 
+
+---
+
+# **14. Joining a Client to the Domain**
+
+In this step, we will join the **Windows 11 Client** to the domain configured on the server, allowing centralized management and authentication.
+
+## **Step 14.1**  
+Log in to the client machine and open **CMD**. Enter **`hostname`** to display the current computer name. Since we’ll be assigning this PC to the domain, we’ll change the name now.
+
+![image](Images/126.png)
+
+## **Step 14.2**  
+Right-click the **Start Menu** and select **System**. 
+
+![image](Images/127.png)
+
+## **Step 14.3**  
+Click on **Advanced System Settings** instead of **Rename this PC**, as we will also assign this PC to the domain.  
+
+![image](Images/128.png)
+
+## **Step 14.4**  
+In the **System Properties** window, under the **Computer Name** tab, click **Change**.  
+
+![image](Images/129.png)
+
+## **Step 14.5**  
+Enter the desired computer name and, under **Member Of**, select **Domain**. Input the **DNS domain name** you set up during the server configuration (e.g., **`projectdomain.com`**) and click **OK**.  
+
+> [!NOTE]  
+> The **DNS domain name** was configured in **[Step 9.2](#step-92)** during the domain setup. Refer back if you’re unsure of the domain name.  
+
+![image](Images/131.png)
+
+## **Step 14.6**  
+You will be prompted to enter the credentials of an account with permissions to join the domain. Use the **Administrator** account you created on the server and click **OK**.  
+
+![image](Images/132.png)
+
+If the process is successful, you will receive a confirmation message welcoming the client to the domain (e.g., **Welcome to the projectdomain.com domain**).  
+
+![image](Images/133.png)
+
+---
+
+# **15. Organizing OUs, Creating Accounts, and Managing Group Assignments in AD**
+
+In this step, we will organize **Organizational Units (OUs)**, create user accounts with varying privileges, and manage group assignments in **Active Directory (AD)**.
+
+## **Step 15.1**  
+On the **Windows Server**, go to the **Start Menu**, search for **`Active Directory Users and Computers`**, and press **`Enter`**.  
+
+![image](Images/134.png)
+
+## **Step 15.2**  
+Right-click on your **Domain Controller**, go to **`New`**, and then click on **`Organizational Unit (OU)`**.  
+
+> [!TIP]  
+> An **Organizational Unit (OU)** is a container in AD used to group users, computers, and other objects. OUs make it easier to manage and apply policies for specific departments or groups.  
+
+![image](Images/135.png)
+
+## **Step 15.3**  
+Create multiple OUs based on your preference. For this example, I am treating OUs as departments and naming them accordingly (e.g., **`Sales`**, **`Admins`**, etc.). 
+
+![image](Images/136.png)  
+
+![image](Images/137.png)
+
+## **Step 15.4**  
+To add a user with admin privileges, right-click on the **`Admins OU`** you created, go to **`New`**, and select **`User`**. 
+
+![image](Images/138.png)
+
+## **Step 15.5**  
+Provide the user's **First Name**, **Last Name**, and a **User Logon Name**. It is good practice to format the logon name as **`FirstInitial.LastName`** (e.g., **`P.Popa`**, **`J.Doe`** ect). Once completed, press **`Next`**.  
+
+![image](Images/139.png)
+
+## **Step 15.6**  
+Set a password for the user. For this lab, I will make the password **`never expire`** for convenience. However, in a real-world scenario, this option should remain unchecked for security purposes. Press **`Next`**.
+
+![image](Images/140.png)
+
+## **Step 15.7**  
+Confirm the account details and press **`Finish`** to create the user.
+
+![image](Images/141.png)
+
+## **Step 15.8**  
+To give this user admin privileges, right-click the account and select **`Add to Group`**.
+
+![image](Images/142.png)
+
+## **Step 15.9**  
+In the **Select Groups** window, type **`Domain Admins`**, click **`Check Names`**, and then press **`OK`**.  
+
+> [!NOTE]  
+> The underlined group name indicates it has been successfully validated in AD. If you don’t know the exact group name, you can type the first few letters and click **`Check Names`**. This will display matching groups with similar names. Once you select the desired group and press **`OK`**, it will be automatically added to the field with an underline, confirming it exists in AD.  
+
+
+![image](Images/143.png)
+
+![image](Images/144.png)
+
+![image](Images/145.png)
+
+## **Step 15.10**  
+You should now see a confirmation message stating the user has been successfully added to the **`Domain Admins`** group. Press **`OK`**. 
+
+![image](Images/146.png)
+
+## **Step 15.11**  
+Next, create a regular user with standard privileges in the **`Sales OU`**. Right-click on the **`Sales OU`**, go to **`New`**, and select **`User`**. 
+
+![image](Images/147.png)
+
+## **Step 15.12**  
+Provide the user's details as done in **[Step 15.5](#step-155)** and press **`Next`**. 
+
+![image](Images/148.png)
+
+## **Step 15.13**  
+Set a password for the user, following the same process as in **[Step 15.6](#step-156)**. Press **`Next`** and then **`Finish`** to finalize.  
+
+![image](Images/149.png)
+
+![image](Images/150.png)
+
+## **Step 15.14**  
+Since this is a regular user, it should already be in the **`Domain Users`** group by default. To verify, right-click on the account, then click **`Properties`**.   
+
+![image](Images/151.png)
+
+![image](Images/152.png)
+
+## **Step 15.15**  
+In the **`Member Of`** tab, confirm that the user is already part of the **`Domain Users`** group by default.  
+
+![image](Images/153.png) 
+
+> [!TIP]  
+> You can use the same method to verify that the admin account has been correctly added to the **`Domain Admins`** group.
+
+![image](Images/154.png)
+
+---
+
+# **16. Verifying Client Network Connectivity and IP Configuration**
+
+In this step, we will verify that the client VM has been successfully added to the domain, assigned an IP address by the DHCP server, and has internet connectivity.
+
+## **Step 16.1**  
+Connect to the client VM (**`Project-Client`**) and you will be prompted to log in. Instead of logging into the local **Project-Client** account, click **`Other User`** and enter the credentials for the domain user account (e.g., **Paul Sales** with the logon name **`p.sales`**).  
+
+![image](Images/155.png)
+
+## **Step 16.2**  
+Once logged in, open **CMD** and run the following commands to verify domain, IP configuration, and internet connectivity:  
+
+### **Command 1**: **`whoami`**  
+This command displays the current user and domain. The output should confirm you are logged in as **`projectdomain\p.sales`**.  
+
+> [!TIP]  
+> The `whoami` command helps verify the domain and user context under which you are logged in.
+
+---
+
+### **Command 2**: **`ipconfig`**  
+This command shows the IP configuration of the machine. The output will display the following:  
+- **DNS Suffix**: Indicates the domain name (e.g., **projectdomain.com**).  
+- **IPv4 Address**: Displays the IP address assigned by the DHCP server (e.g., **10.10.0.100**).  
+
+> [!NOTE]  
+> In this example, the client received **10.10.0.100**, which is within the scope configured earlier (**10.10.0.100 - 10.10.0.200**). Since this is the first client to join the domain, it was assigned the first available IP in the range.
+
+---
+
+### **Command 3**: **`ping www.google.com`**  
+This command tests internet connectivity. The output will confirm the ability to send and receive packets over the internet:  
+- **Packets Sent**: 4  
+- **Packets Received**: 4  
+- **Packets Lost**: 0  
+
+> [!IMPORTANT]  
+> Successful packet transmission and receipt indicate that the client can communicate with external networks, verifying the correct configuration of **NAT** on the server.
+
+![image](Images/156.png)
+
+## **Step 16.3**  
+Go back to **Server Manager** on the server VM and open the **DHCP** window. Navigate to **`Address Leases`** under **IPv4**. Here, you will see the following details about the client machine:  
+- **IP Address**: Confirms that the DHCP server assigned an IP address (e.g., **10.10.0.100**) to the client.  
+- **Client Name**: Displays the name of the client machine.  
+- **Lease Expiry**: Shows when the IP lease will expire.  
+- **Lease Type**: Indicates that the IP address was automatically assigned by the DHCP server.  
+
+> [!NOTE]  
+> Verifying the address lease in the DHCP window helps confirm that the server’s DHCP scope is functioning correctly and has successfully assigned an IP address to the client.  
+
+![image](Images/157.png)
+
+## **Step 16.4**  
+Open **Active Directory Users and Computers** on the server VM and navigate to **`Computers`**. You should see the client VM listed by the name you assigned earlier during the setup process (e.g., **Project-Client**).  
+
+> [!TIP]  
+> Checking **Computers** in AD ensures the client machine has been successfully joined to the domain and is being tracked within the domain environment.  
+
+![image](Images/158.png)
+
+---
+
+# **17. Troubleshooting**
 
